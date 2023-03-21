@@ -1,5 +1,7 @@
 import math
 import xml.etree.ElementTree as etree
+from collections.abc import Iterable
+
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
@@ -22,7 +24,6 @@ class Airfoil:
     YQ = [0.0, 0.0]
     ALP = [0.0] * 14
 
-
     def calc_theta(self, SVAL) -> float:
         if SVAL == 0:
             return 0
@@ -31,7 +32,6 @@ class Airfoil:
         if SVAL == -1:
             return -math.pi / 2
         return math.atan(SVAL / math.sqrt(1 - math.pow(SVAL, 2)))
-
 
     def num_points(self):
         self.NP = int(input("How Many Points Do You Want Generated : [100] ") or 100)
@@ -46,7 +46,6 @@ class Airfoil:
         self.DYC = [0.0] * self.NP
 
         self.YLED = [0.0] * self.NP
-
 
     def coord_spacing(self):
         while (True):
@@ -143,10 +142,13 @@ class Airfoil:
                     self.DYC[I] = (K1 / 6) * (3 * math.pow(self.XCC[I], 2) - 6 * MC * self.XCC[I] + math.pow(MC, 2) * (3 - MC))
             else:  # reflex camber curve
                 if self.XCC[I] > MC:  # Back
-                    self.YC[I] = (K1 / 6) * (K2K1 * math.pow((self.XCC[I] - MC), 3) - K2K1 * math.pow((1 - MC), 3) * self.XCC[I] - math.pow(MC, 3) * self.XCC[I] + math.pow(MC, 3))
+                    self.YC[I] = (K1 / 6) * (
+                            K2K1 * math.pow((self.XCC[I] - MC), 3) - K2K1 * math.pow((1 - MC), 3) * self.XCC[I] - math.pow(MC, 3) * self.XCC[I] + math.pow(
+                        MC, 3))
                     self.DYC[I] = (K1 / 6) * (3 * K2K1 * math.pow((self.XCC[I] - MC), 2) - K2K1 * math.pow((1 - MC), 3) - math.pow(MC, 3))
                 else:  # Front
-                    self.YC[I] = (K1 / 6) * (math.pow((self.XCC[I] - MC), 3) - K2K1 * math.pow((1 - MC), 3) * self.XCC[I] - math.pow(MC, 3) * self.XCC[I] + math.pow(MC, 3))
+                    self.YC[I] = (K1 / 6) * (
+                            math.pow((self.XCC[I] - MC), 3) - K2K1 * math.pow((1 - MC), 3) * self.XCC[I] - math.pow(MC, 3) * self.XCC[I] + math.pow(MC, 3))
                     self.DYC[I] = (K1 / 6) * (3 * math.pow((self.XCC[I] - MC), 2) - K2K1 * math.pow((1 - MC), 3) - math.pow(MC, 3))
 
         if LED > 0 and LEDD > 0:
@@ -177,7 +179,6 @@ class Airfoil:
 
         print(DESIG_str)
 
-
     def derive_surfaces(self):
         for I in range(self.NP):
             THET = 0  # math.atan(DYC[I])
@@ -186,8 +187,7 @@ class Airfoil:
             self.XL[I] = self.XCC[I] + self.YT[I] * math.sin(THET)
             self.YL[I] = self.YC[I] - self.YT[I] * math.cos(THET) - self.YLED[I]
 
-
-    def plot_svg(self, fileName: str):
+    def plot_svg(self, container: etree.Element):
         all_x = self.XU + self.XL
         minx = math.floor(min(all_x) * 100) - 1
         maxx = math.ceil(max(all_x) * 100) + 1
@@ -195,11 +195,7 @@ class Airfoil:
         miny = math.floor(min(all_y) * 100) - 1
         maxy = math.ceil(max(all_y) * 100) + 1
 
-        root = etree.Element('svg', width="1024", height="768", viewBox="0 0 102 76", version='1.1', xmlns='http://www.w3.org/2000/svg')
-        el = etree.SubElement(root, "title")
-        el.text = "Airfoil plot"
-
-        el_tx1 = etree.SubElement(root, "g", transform="translate(3,20)")
+        el_tx1 = etree.SubElement(container, "g", transform="translate(3,20)")
         el_tx2 = etree.SubElement(el_tx1, "g", transform="scale(.9,-.9)")
 
         # vertical divisions every 10
@@ -208,12 +204,12 @@ class Airfoil:
                 x_pos = str(x)
                 el_line = etree.SubElement(el_tx2, "line", fill='none', x1=x_pos, x2=x_pos, y1=str(miny), y2=str(maxy))
                 el_line.set('stroke-width', '0.1')
-                el_line.set('stroke','darkgreen')
+                el_line.set('stroke', 'darkgreen')
             elif x % 5 == 0:
                 x_pos = str(x)
                 el_line = etree.SubElement(el_tx2, "line", fill='none', x1=x_pos, x2=x_pos, y1=str(miny), y2=str(maxy))
                 el_line.set('stroke-width', '0.05')
-                el_line.set('stroke','green')
+                el_line.set('stroke', 'green')
 
         # horizontal divisions every 1
         for y in range(1, maxy + 1):
@@ -221,10 +217,10 @@ class Airfoil:
             el_line = etree.SubElement(el_tx2, "line", fill="none", x1=str(minx), x2=str(maxx), y1=y_pos, y2=y_pos)
             if y % 5 == 0:
                 el_line.set('stroke-width', '0.1')
-                el_line.set('stroke','darkgreen')
+                el_line.set('stroke', 'darkgreen')
             else:
                 el_line.set('stroke-width', '0.05')
-                el_line.set('stroke','green')
+                el_line.set('stroke', 'green')
 
         for y in range(-1, miny - 1, -1):
             y_pos = str(y)
@@ -237,22 +233,17 @@ class Airfoil:
                 el_line.set('stroke', 'green')
 
         # x axis
-        el_line = etree.SubElement(el_tx2, "line", fill="none", stroke="black", x1=str(minx -1), x2=str(maxx + 1), y1="0", y2="0")
+        el_line = etree.SubElement(el_tx2, "line", fill="none", stroke="black", x1=str(minx - 1), x2=str(maxx + 1), y1="0", y2="0")
         el_line.set('stroke-width', '0.1')
 
         # y axis
-        el_line = etree.SubElement(el_tx2, "line", fill="none", stroke="black", x1="0", x2="0", y1=str(miny-1), y2=str(maxy+1))
+        el_line = etree.SubElement(el_tx2, "line", fill="none", stroke="black", x1="0", x2="0", y1=str(miny - 1), y2=str(maxy + 1))
         el_line.set('stroke-width', '0.1')
 
         # the airfoil curve
         el_path = etree.SubElement(el_tx2, "path", fill="none", stroke="red",
                                    d=self.profile_to_svg_path())
         el_path.set('stroke-width', '0.2')
-
-        tree = etree.ElementTree(root)
-        with open(fileName, "wb") as files:
-            tree.write(files)
-
 
     def profile_to_svg_path(self) -> str:
         path = ""
@@ -269,17 +260,32 @@ class Airfoil:
             path += step_type + fmt.format(self.XL[I] * 100, self.YL[I] * 100)
 
         # finally close the path at the trailing edge
-        if self.YU[self.NP-1] != self.YL[self.NP-1]:
-            path += step_type + fmt.format(self.XU[self.NP-1] * 100, self.YU[self.NP-1] * 100)
+        if self.YU[self.NP - 1] != self.YL[self.NP - 1]:
+            path += step_type + fmt.format(self.XU[self.NP - 1] * 100, self.YU[self.NP - 1] * 100)
 
         return path
+
+
+def plot_svg(filename: str, airfoils: Iterable[Airfoil]):
+    root = etree.Element('svg', width="1024", height="768", viewBox="0 0 102 76", version='1.1', xmlns='http://www.w3.org/2000/svg')
+    el = etree.SubElement(root, "title")
+    el.text = "Airfoil plot"
+
+    for airfoil in airfoils:
+        airfoil.plot_svg(root)
+
+    tree = etree.ElementTree(root)
+    with open(filename, "wb") as files:
+        tree.write(files)
+
 
 af = Airfoil()
 af.num_points()
 af.coord_spacing()
 af.naca_five_modified()
 af.derive_surfaces()
-af.plot_svg("airfoil.svg")
+
+plot_svg("airfoil.svg", {af})
 
 # for i in range(NP):
 #    print(i, XU[i], YU[i], XL[i], YL[i])
