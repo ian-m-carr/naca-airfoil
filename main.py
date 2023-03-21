@@ -7,7 +7,7 @@ from collections.abc import Iterable
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
 class Airfoil:
-    NP = 100
+    NP = 0
 
     XCC = []
     XU = []
@@ -24,18 +24,8 @@ class Airfoil:
     YQ = [0.0, 0.0]
     ALP = [0.0] * 14
 
-    def calc_theta(self, SVAL) -> float:
-        if SVAL == 0:
-            return 0
-        if SVAL == 1:
-            return math.pi / 2
-        if SVAL == -1:
-            return -math.pi / 2
-        return math.atan(SVAL / math.sqrt(1 - math.pow(SVAL, 2)))
-
-    def num_points(self):
-        self.NP = int(input("How Many Points Do You Want Generated : [100] ") or 100)
-
+    def __init__(self, num_points: int = 100):
+        self.NP = num_points
         self.XCC = [0.0] * self.NP
         self.XU = [0.0] * self.NP
         self.YU = [0.0] * self.NP
@@ -47,20 +37,17 @@ class Airfoil:
 
         self.YLED = [0.0] * self.NP
 
-    def coord_spacing(self):
-        while (True):
-            print("You Have The Following Options For Coordinate Spacing:")
-            print("     1 - Equal Spacing")
-            print("     2 - Half Cosine With Smaller Increments Near 0")
-            print("     3 - Half Cosine With Smaller Increments Near 1")
-            print("     4 - Full Cosine")
-            SPAC = int(input(" Your Choice : [4] ") or 4)
+    def calc_theta(self, SVAL) -> float:
+        if SVAL == 0:
+            return 0
+        if SVAL == 1:
+            return math.pi / 2
+        if SVAL == -1:
+            return -math.pi / 2
+        return math.atan(SVAL / math.sqrt(1 - math.pow(SVAL, 2)))
 
-            if SPAC < 0 or SPAC > 4: continue
-
-            break
-
-        match SPAC:
+    def set_coord_spacing(self, spacing: int):
+        match spacing:
             case 1:
                 DELTH = 1 / (self.NP - 1)
                 for I in range(self.NP):
@@ -79,18 +66,7 @@ class Airfoil:
                 for I in range(self.NP):
                     self.XCC[I] = .5 - .5 * math.cos(DELTH * (I))
 
-    def naca_five_modified(self):
-        print("You Have Chosen To Create A NACA Modified 5 Digit Airfoil\n")
-        LL = int(input(" Enter The First Digit Of The 5 (Cl * 20/3) 2 -> Cl = 0.3: [2]") or 2)
-        PP = int(input(" Enter The Second Digit Of The 5 (position of max camber * 20) 3 = 0.15 or 15% of chord : [3]") or 3)
-        QQ = int(input(" Enter The Third Digit Of The 5 (0 normal camber, 1 reflex camber): [0]") or 0)
-        TOC = int(input(" Enter The Last Two Digits Of The 5 (max thickness percentage) : [18]") or 18)
-        IP = int(input(" Enter The First Digit of the modification (6 = original LE curvature) : [6]") or 6)
-        TT = int(input(" Enter The Second Digit Of modification (position in 1/10 chord of max thickness default 0.3) : [3]") or 3)
-
-        LED = float(input(" Enter The leading edge droop distance (at LE) : [0]") or 0)
-        LEDD = int(input(" Enter The chord length over which droop is introduced (position in 1/10 chord from LE) : [0]") or 0)
-
+    def naca_five_modified(self, LL: int, PP: int, QQ: int, TOC: int, IP: int, TT: int, LED: float, LEDD: int):
         if QQ < 0 or QQ > 1:
             raise Exception("third digit should be 0 (normal) or 1 (reflex) for camber line")
 
@@ -158,28 +134,23 @@ class Airfoil:
                     self.YLED[I] = LED * math.pow(1 - (self.XCC[I] / (LEDD / 10)), 2)
 
         # leading edge radius
-        LER = 1.1019 * math.pow((IP / 6 * TC), 2)
+        self.LER = 1.1019 * math.pow((IP / 6 * TC), 2)
 
         if IP >= 9:
-            LER = 3 * 1.1019 * math.pow((TC), 2)
+            self.LER = 3 * 1.1019 * math.pow((TC), 2)
 
         # trailing edge angle
-        TEANG = 2 * math.atan(1.16925 * TC)
+        self.TEANG = 2 * math.atan(1.16925 * TC)
 
         # designation
         DESIG = LL * 10000 + PP * 1000 + QQ * 100 + TOC
-        DESIG_str = str(DESIG)
+        self.DESIG_str = str(DESIG)
 
         # modification designation
         SESIG = IP * 10 + TT
-        DESIG_str = DESIG_str + "-" + str(SESIG)
+        self.DESIG_str = self.DESIG_str + "-" + str(SESIG)
 
-        print("Leading edge radius : " + str(LER))
-        print("Trailing edge angle : " + str(TEANG))
-
-        print(DESIG_str)
-
-    def derive_surfaces(self):
+        # now derive the surfaces
         for I in range(self.NP):
             THET = 0  # math.atan(DYC[I])
             self.XU[I] = self.XCC[I] - self.YT[I] * math.sin(THET)
@@ -279,12 +250,44 @@ def plot_svg(filename: str, airfoils: Iterable[Airfoil]):
         tree.write(files)
 
 
-af = Airfoil()
-af.num_points()
-af.coord_spacing()
-af.naca_five_modified()
-af.derive_surfaces()
+# the number of points per airfoil surface (* 2 for upper and lower surfaces!)
+np = int(input("How Many Points Do You Want Generated : [100] ") or 100)
 
+# construct the airfoil
+af = Airfoil(np)
+
+# how to distribute the coordinates along the x axis
+while (True):
+    print("You Have The Following Options For Coordinate Spacing:")
+    print("     1 - Equal Spacing")
+    print("     2 - Half Cosine With Smaller Increments Near 0")
+    print("     3 - Half Cosine With Smaller Increments Near 1")
+    print("     4 - Full Cosine")
+    spacing = int(input(" Your Choice : [4] ") or 4)
+
+    if spacing < 0 or spacing > 4: continue
+    break
+
+# and set it's spacing
+af.set_coord_spacing(spacing)
+
+# enter the NACA profile and modification digits NNNNN-MM
+print("To Create A NACA Modified 5 Digit Airfoil\n")
+LL = int(input(" Enter The First Digit Of The 5 (Cl * 20/3) 2 -> Cl = 0.3: [2]") or 2)
+PP = int(input(" Enter The Second Digit Of The 5 (position of max camber * 20) 3 = 0.15 or 15% of chord : [3]") or 3)
+QQ = int(input(" Enter The Third Digit Of The 5 (0 normal camber, 1 reflex camber): [0]") or 0)
+TOC = int(input(" Enter The Last Two Digits Of The 5 (max thickness percentage) : [18]") or 18)
+IP = int(input(" Enter The First Digit of the modification (6 = original LE curvature) : [6]") or 6)
+TT = int(input(" Enter The Second Digit Of modification (position in 1/10 chord of max thickness default 0.3) : [3]") or 3)
+
+# optionally add a leading edge droop
+LED = float(input(" Enter The leading edge droop distance (at LE) : [0]") or 0)
+LEDD = int(input(" Enter The chord length over which droop is introduced (position in 1/10 chord from LE) : [0]") or 0)
+
+# calculate the profile
+af.naca_five_modified(LL, PP, QQ, TOC, IP, TT, LED, LEDD)
+
+# plot the set of airfoils to an svg file
 plot_svg("airfoil.svg", {af})
 
 # for i in range(NP):
