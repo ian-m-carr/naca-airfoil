@@ -74,22 +74,22 @@ def coord_spacing():
         case 1:
             DELTH = 1 / (NPP - 1)
             for I in range(NPP):
-                XDD[I] = DELTH * (I - 1)
+                XDD[I] = DELTH * (I)
         case 2:
             DELTH = math.pi / 2 / (NPP - 1)
             for I in range(NPP):
-                XDD[I] = 1 - math.cos(DELTH * (I - 1))
+                XDD[I] = 1 - math.cos(DELTH * (I))
         case 3:
             DELTH = math.pi / 2 / (NPP - 1)
             for I in range(NPP):
-                XDD[I] = math.cos(math.pi / 2 - DELTH * (I - 1))
+                XDD[I] = math.cos(math.pi / 2 - DELTH * (I))
         case _:
             # default to Full Cosine
             DELTH = math.pi / (NPP - 1)
             for I in range(NPP):
-                XDD[I] = .5 - .5 * math.cos(DELTH * (I - 1))
+                XDD[I] = .5 - .5 * math.cos(DELTH * (I))
 
-    DELTH = math.pi / NP
+    DELTH = math.pi / (NP -1)
     for I in range(NP):
         XCC[I] = .5 - .5 * math.cos(DELTH * I)
 
