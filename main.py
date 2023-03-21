@@ -281,6 +281,10 @@ def profile_to_svg_path() -> str:
     for I in range(NP):
         path += step_type + fmt.format(XL[I] * 100, YL[I] * 100)
 
+    # finally close the path at the trailing edge
+    if YU[NP-1] != YL[NP-1]:
+        path += step_type + fmt.format(XU[NP-1] * 100, YU[NP-1] * 100)
+
     return path
 
 
