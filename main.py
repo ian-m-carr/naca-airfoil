@@ -5,7 +5,6 @@ import xml.etree.ElementTree as etree
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
 NP = 100
-NPP = 0
 
 XCC = []
 XU = []
@@ -17,7 +16,6 @@ YC = []
 
 YLED = []
 
-XDD = []
 DYC = []
 XQ = [0.0, 0.0]
 YQ = [0.0, 0.0]
@@ -35,29 +33,25 @@ def calc_theta(SVAL) -> float:
 
 
 def num_points():
-    global NP, NPP
-    global XCC, XU, YU, XL, YL, YT, YC, XDD, DYC
+    global NP
+    global XCC, XU, YU, XL, YL, YT, YC, DYC
     global YLED
 
-    NP = 100
-    NPP = int(input("How Many Points Do You Want Generated : [100] ") or 100)
+    NP = int(input("How Many Points Do You Want Generated : [100] ") or 100)
 
-    XCC = [0.0] * NPP
-    XU = [0.0] * NPP
-    YU = [0.0] * NPP
-    XL = [0.0] * NPP
-    YL = [0.0] * NPP
-    YT = [0.0] * NPP
-    YC = [0.0] * NPP
-    XDD = [0.0] * NPP
-    DYC = [0.0] * NPP
+    XCC = [0.0] * NP
+    XU = [0.0] * NP
+    YU = [0.0] * NP
+    XL = [0.0] * NP
+    YL = [0.0] * NP
+    YT = [0.0] * NP
+    YC = [0.0] * NP
+    DYC = [0.0] * NP
 
-    YLED = [0.0] * NPP
+    YLED = [0.0] * NP
 
 
 def coord_spacing():
-    global XDD
-
     while (True):
         print("You Have The Following Options For Coordinate Spacing:")
         print("     1 - Equal Spacing")
@@ -72,27 +66,28 @@ def coord_spacing():
 
     match SPAC:
         case 1:
-            DELTH = 1 / (NPP - 1)
-            for I in range(NPP):
-                XDD[I] = DELTH * (I)
+            DELTH = 1 / (NP - 1)
+            for I in range(NP):
+                XCC[I] = DELTH * (I)
         case 2:
-            DELTH = math.pi / 2 / (NPP - 1)
-            for I in range(NPP):
-                XDD[I] = 1 - math.cos(DELTH * (I))
+            DELTH = math.pi / 2 / (NP - 1)
+            for I in range(NP):
+                XCC[I] = 1 - math.cos(DELTH * (I))
         case 3:
-            DELTH = math.pi / 2 / (NPP - 1)
-            for I in range(NPP):
-                XDD[I] = math.cos(math.pi / 2 - DELTH * (I))
+            DELTH = math.pi / 2 / (NP - 1)
+            for I in range(NP):
+                XCC[I] = math.cos(math.pi / 2 - DELTH * (I))
         case _:
             # default to Full Cosine
-            DELTH = math.pi / (NPP - 1)
-            for I in range(NPP):
-                XDD[I] = .5 - .5 * math.cos(DELTH * (I))
+            DELTH = math.pi / (NP - 1)
+            for I in range(NP):
+                XCC[I] = .5 - .5 * math.cos(DELTH * (I))
 
+    """
     DELTH = math.pi / (NP -1)
     for I in range(NP):
         XCC[I] = .5 - .5 * math.cos(DELTH * I)
-
+    """
 
 def naca_five_modified():
     global NP
@@ -111,11 +106,6 @@ def naca_five_modified():
 
     if QQ < 0 or QQ > 1:
         raise Exception("third digit should be 0 (normal) or 1 (reflex) for camber line")
-
-    if LL == 0:
-        NP = NPP
-        for I in range(NP):
-            XCC[I] = XDD[I]
 
     LC = LL / 10
     PC = PP / 20
