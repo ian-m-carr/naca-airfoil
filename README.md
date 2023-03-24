@@ -21,4 +21,4 @@ information of how great this droop is.
 
 The code produces an svg output file airfoil.svg in the current folder
 
-sample: ![sample output doc/airfoil.svg](./doc/airfoil.svg)
+![sample output doc/airfoil.svg](./doc/airfoil.svg)
