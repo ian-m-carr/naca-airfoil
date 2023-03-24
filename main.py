@@ -158,7 +158,7 @@ class Airfoil:
             self.XL[I] = self.XCC[I] + self.YT[I] * math.sin(THET)
             self.YL[I] = self.YC[I] - self.YT[I] * math.cos(THET) - self.YLED[I]
 
-    def plot_svg(self, container: etree.Element):
+    def plot_svg(self, container: etree.Element, vert_offset: float) -> float:
         all_x = self.XU + self.XL
         minx = math.floor(min(all_x) * 100) - 1
         maxx = math.ceil(max(all_x) * 100) + 1
@@ -166,8 +166,8 @@ class Airfoil:
         miny = math.floor(min(all_y) * 100) - 1
         maxy = math.ceil(max(all_y) * 100) + 1
 
-        el_tx1 = etree.SubElement(container, "g", transform="translate(3,20)")
-        el_tx2 = etree.SubElement(el_tx1, "g", transform="scale(.9,-.9)")
+        el_tx1 = etree.SubElement(container, "g", transform="translate(5,{})".format(vert_offset + maxy))
+        el_tx2 = etree.SubElement(el_tx1, "g", transform="scale(.9,-.9)")  # scale so that 0-100 x fills 90 percent of the width
 
         # vertical divisions every 10
         for x in range(1, 101):
@@ -216,6 +216,30 @@ class Airfoil:
                                    d=self.profile_to_svg_path())
         el_path.set('stroke-width', '0.2')
 
+        # text block
+        """
+        <g transform="translate(0,18.1424)">
+		<g transform="scale(1,1)">
+			<text fill="rgb(48,48,144)" font-size="1.8" style="font-family:Arial,Helvetica,sans-serif;" x="1" y="2">Name = NACA 24012 Airfoil cl=0.30 T=12.0% P=20.0%</text>
+			<text fill="rgb(48,48,144)" font-size="1.8" style="font-family:Arial,Helvetica,sans-serif;" x="1" y="4">Chord = 100mm  Radius = 0mm  Thickness = 100%  Origin = 0%  Pitch = 0&#176; </text>
+		</g>
+        </g>
+        """
+        el_tx1 = etree.SubElement(container, "g", transform="translate(5,{})".format(vert_offset + (maxy - miny)))
+        el_tx2 = etree.SubElement(el_tx1, "g", transform="scale(.9,.9)")  # scale so that 0-100 x fills 90 percent of the width
+
+        el_txt = etree.SubElement(el_tx2, "text", fill="rgb(48,48,144)", style="font-family:Arial,Helvetica,sans-serif;", x="1", y="2")
+        el_txt.set("font-size", "1.8")
+        el_txt.text = "Name: " + self.DESIG_str
+
+        # additional info
+        # el_txt = etree.SubElement(el_tx2, "text", fill="rgb(48,48,144)", style="font-family:Arial,Helvetica,sans-serif;", x="1", y="4")
+        # el_txt.set("font-size","1.8")
+        # el_txt.text = ""
+
+        # return the height of the profile maximum + minimum (-ve)
+        return maxy - miny + 5
+
     def profile_to_svg_path(self) -> str:
         path = ""
         step_type = "M "  # begin with a move
@@ -238,12 +262,18 @@ class Airfoil:
 
 
 def plot_svg(filename: str, airfoils: Iterable[Airfoil]):
-    root = etree.Element('svg', width="1024", height="768", viewBox="0 0 102 76", version='1.1', xmlns='http://www.w3.org/2000/svg')
+    # A4 = 210mmx297mm 297/210 = 1.4143
+    root = etree.Element('svg',
+                         width="210mm", height="297mm",  # A4 paper size
+                         viewBox="0 0 100 141.3",  # scale viewport for a "square" coordinate grid
+                         version='1.1', xmlns='http://www.w3.org/2000/svg')
+
     el = etree.SubElement(root, "title")
     el.text = "Airfoil plot"
 
+    y_offset = 5
     for airfoil in airfoils:
-        airfoil.plot_svg(root)
+        y_offset += airfoil.plot_svg(root, y_offset)
 
     tree = etree.ElementTree(root)
     with open(filename, "wb") as files:
@@ -253,8 +283,7 @@ def plot_svg(filename: str, airfoils: Iterable[Airfoil]):
 # the number of points per airfoil surface (* 2 for upper and lower surfaces!)
 np = int(input("How Many Points Do You Want Generated : [100] ") or 100)
 
-# construct the airfoil
-af = Airfoil(np)
+airfoils = []
 
 # how to distribute the coordinates along the x axis
 while (True):
@@ -268,27 +297,40 @@ while (True):
     if spacing < 0 or spacing > 4: continue
     break
 
-# and set it's spacing
-af.set_coord_spacing(spacing)
-
 # enter the NACA profile and modification digits NNNNN-MM
-print("To Create A NACA Modified 5 Digit Airfoil\n")
-LL = int(input(" Enter The First Digit Of The 5 (Cl * 20/3) 2 -> Cl = 0.3: [2]") or 2)
-PP = int(input(" Enter The Second Digit Of The 5 (position of max camber * 20) 3 = 0.15 or 15% of chord : [3]") or 3)
-QQ = int(input(" Enter The Third Digit Of The 5 (0 normal camber, 1 reflex camber): [0]") or 0)
-TOC = int(input(" Enter The Last Two Digits Of The 5 (max thickness percentage) : [18]") or 18)
-IP = int(input(" Enter The First Digit of the modification (6 = original LE curvature) : [6]") or 6)
-TT = int(input(" Enter The Second Digit Of modification (position in 1/10 chord of max thickness default 0.3) : [3]") or 3)
+while True:
+    print("Create A NACA 5 Digit (Modified) Airfoil\n")
+    LL = int(input(" Enter The First Digit Of The 5 (Cl * 20/3) 2 -> Cl = 0.3: [2]") or 2)
+    PP = int(input(" Enter The Second Digit Of The 5 (position of max camber * 20) 3 = 0.15 or 15% of chord : [3]") or 3)
+    QQ = int(input(" Enter The Third Digit Of The 5 (0 normal camber, 1 reflex camber): [0]") or 0)
+    TOC = int(input(" Enter The Last Two Digits Of The 5 (max thickness percentage) : [18]") or 18)
 
-# optionally add a leading edge droop
-LED = float(input(" Enter The leading edge droop distance (at LE) : [0]") or 0)
-LEDD = int(input(" Enter The chord length over which droop is introduced (position in 1/10 chord from LE) : [0]") or 0)
+    IP = int(input(" Enter The First Digit of the modification (6 = original LE curvature) : [6]") or 6)
+    TT = int(input(" Enter The Second Digit Of modification (position in 1/10 chord of max thickness default 0.3) : [3]") or 3)
 
-# calculate the profile
-af.naca_five_modified(LL, PP, QQ, TOC, IP, TT, LED, LEDD)
+    # optionally add a leading edge droop
+    LED = float(input(" Enter The leading edge droop distance (at LE) : [0]") or 0)
+    if LED != 0.0:
+        LEDD = int(input(" Enter The chord length over which droop is introduced (position in 1/10 chord from LE) : [0]") or 0)
+    else:
+        LEDD = 0.0
+
+    # construct the airfoil
+    af = Airfoil(np)
+
+    # and set it's spacing
+    af.set_coord_spacing(spacing)
+
+    # calculate the profile
+    af.naca_five_modified(LL, PP, QQ, TOC, IP, TT, LED, LEDD)
+
+    airfoils.append(af)
+
+    if int(input(" 0 to finish, 1 to continue : [0]") or 0) == 0:
+        break
 
 # plot the set of airfoils to an svg file
-plot_svg("airfoil.svg", {af})
+plot_svg("airfoil.svg", airfoils)
 
 # for i in range(NP):
 #    print(i, XU[i], YU[i], XL[i], YL[i])
