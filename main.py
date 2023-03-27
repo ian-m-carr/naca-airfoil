@@ -109,7 +109,7 @@ class Airfoil:
 
         DESIG = MM * 1000 + PP * 1000 + TOC
         SESIG = IP * 10 + TT
-        self.DESIG_str = str(DESIG) + "-" + str(SESIG)
+        self.DESIG_str = "{:04d}".format(DESIG) + "-" + "{:02d}".format(SESIG)
 
         # now derive the surfaces
         for I in range(self.NP):
@@ -201,7 +201,7 @@ class Airfoil:
 
         # modification designation
         SESIG = IP * 10 + TT
-        self.DESIG_str = self.DESIG_str + "-" + str(SESIG)
+        self.DESIG_str = "{:05d}".format(self.DESIG_str) + "-" + "{:02d}".format(SESIG)
 
         # now derive the surfaces
         for I in range(self.NP):
