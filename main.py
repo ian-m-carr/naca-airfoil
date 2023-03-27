@@ -66,6 +66,59 @@ class Airfoil:
                 for I in range(self.NP):
                     self.XCC[I] = .5 - .5 * math.cos(DELTH * (I))
 
+    def naca_four_modified(self, MM: int, PP: int, TOC: int, IP: int, TT: int, LED: float, LEDD: int):
+        MC = MM / 100
+        PC = PP / 10
+        TC = TOC / 100
+        TP = TT / 10
+        D1 = (2.24 - 5.42 * TP + 12.3 * math.pow(TP, 2)) / 10 / (1 - .878 * TP)
+        D2 = (.294 - 2 * (1 - TP) * D1) / math.pow(1 - TP, 2)
+        D3 = (-.196 + (1 - TP) * D1) / math.pow(1 - TP, 3)
+        A0 = .296904 * IP / 6
+        R1 = math.pow(1 - TP, 2) / 5 / (.588 - 2 * D1 * (1 - TP))
+        AA1 = .3 / TP - 15 * A0 / 8 / math.sqrt(TP) - TP / 10 / R1
+        A2 = -.3 / math.pow(TP, 2) + 5 * A0 / 4 / math.pow(TP, 1.5) + 1 / 5 / R1
+        A3 = .1 / math.pow(TP, 3) - .375 * A0 / math.pow(TP, 2.5) - 1 / 10 / R1 / TP
+
+        for I in range(self.NP):
+            if self.XCC[I] > TP:
+                self.YT[I] = 5 * TC * (.002 + D1 * (1 - self.XCC[I]) + D2 * math.pow(1 - self.XCC[I], 2) + D3 * math.pow(1 - self.XCC[I], 3))
+            else:
+                self.YT[I] = 5 * TC * (A0 * math.sqrt(self.XCC[I]) + AA1 * self.XCC[I] + A2 * math.pow(self.XCC[I], 2) + A3 * math.pow(self.XCC[I], 3))
+
+            if MM == 0: continue
+
+            if self.XCC[I] > PC:
+                self.YC[I] = MC / math.pow(1 - PC, 2) * (1 - 2 * PC + 2 * PC * self.XCC[I] - math.pow(self.XCC[I], 2))
+                self.DYC[I] = 2 * MC / math.pow(1 - PC, 2) * (PC - self.XCC[I])
+            else:
+                self.YC[I] = MC / PC ^ 2 * (2 * PC * self.XCC[I] - math.pow(self.XCC[I], 2))
+                self.DYC[I] = 2 * MC / PC ^ 2 * (PC - self.XCC[I])
+
+        if LED > 0 and LEDD > 0:
+            for I in range(self.NP):
+                # do we have any droop to add to camber
+                if self.XCC[I] < LEDD / 10:
+                    self.YLED[I] = LED * math.pow(1 - (self.XCC[I] / (LEDD / 10)), 2)
+
+        self.LER = 1.1019 * math.pow(IP / 6 * TC, 2)
+        if IP >= 9:
+            LER = 3 * 1.1019 * math.pow(TC, 2)
+
+        self.TEANG = 2 * math.atan(1.16925 * TC)
+
+        DESIG = MM * 1000 + PP * 1000 + TOC
+        SESIG = IP * 10 + TT
+        self.DESIG_str = str(DESIG) + "-" + str(SESIG)
+
+        # now derive the surfaces
+        for I in range(self.NP):
+            THET = 0  # math.atan(DYC[I])
+            self.XU[I] = self.XCC[I] - self.YT[I] * math.sin(THET)
+            self.YU[I] = self.YC[I] + self.YT[I] * math.cos(THET) - self.YLED[I]
+            self.XL[I] = self.XCC[I] + self.YT[I] * math.sin(THET)
+            self.YL[I] = self.YC[I] - self.YT[I] * math.cos(THET) - self.YLED[I]
+
     def naca_five_modified(self, LL: int, PP: int, QQ: int, TOC: int, IP: int, TT: int, LED: float, LEDD: int):
         if QQ < 0 or QQ > 1:
             raise Exception("third digit should be 0 (normal) or 1 (reflex) for camber line")
@@ -280,25 +333,35 @@ def plot_svg(filename: str, airfoils: Iterable[Airfoil]):
         tree.write(files)
 
 
-# the number of points per airfoil surface (* 2 for upper and lower surfaces!)
-np = int(input("How Many Points Do You Want Generated : [100] ") or 100)
+def do_naca_four() -> Airfoil:
+    print("Create A NACA 4 Digit (Modified) Airfoil\n")
+    MM = int(input(" Enter The First Digit Of The 4 (the maximum camber divided by 100): [0]") or 0)
+    PP = int(input(" Enter The Second Digit Of The 5 (the position of the maximum camber divided by 10) : [0]") or 0)
+    TOC = int(input(" Enter The Last Two Digits Of The 5 (max thickness percentage) : [18]") or 18)
 
-airfoils = []
+    IP = int(input(" Enter The First Digit of the modification (6 = original LE curvature) : [6]") or 6)
+    TT = int(input(" Enter The Second Digit Of modification (position in 1/10 chord of max thickness default 0.3) : [3]") or 3)
 
-# how to distribute the coordinates along the x axis
-while (True):
-    print("You Have The Following Options For Coordinate Spacing:")
-    print("     1 - Equal Spacing")
-    print("     2 - Half Cosine With Smaller Increments Near 0")
-    print("     3 - Half Cosine With Smaller Increments Near 1")
-    print("     4 - Full Cosine")
-    spacing = int(input(" Your Choice : [4] ") or 4)
+    # optionally add a leading edge droop
+    LED = float(input(" Enter The leading edge droop distance (at LE) : [0]") or 0)
+    if LED != 0.0:
+        LEDD = int(input(" Enter The chord length over which droop is introduced (position in 1/10 chord from LE) : [0]") or 0)
+    else:
+        LEDD = 0.0
 
-    if spacing < 0 or spacing > 4: continue
-    break
+    # construct the airfoil
+    af = Airfoil(np)
 
-# enter the NACA profile and modification digits NNNNN-MM
-while True:
+    # and set it's spacing
+    af.set_coord_spacing(spacing)
+
+    # calculate the profile
+    af.naca_four_modified(MM, PP, TOC, IP, TT, LED, LEDD)
+
+    return af
+
+
+def do_naca_five() -> Airfoil:
     print("Create A NACA 5 Digit (Modified) Airfoil\n")
     LL = int(input(" Enter The First Digit Of The 5 (Cl * 20/3) 2 -> Cl = 0.3: [2]") or 2)
     PP = int(input(" Enter The Second Digit Of The 5 (position of max camber * 20) 3 = 0.15 or 15% of chord : [3]") or 3)
@@ -324,7 +387,39 @@ while True:
     # calculate the profile
     af.naca_five_modified(LL, PP, QQ, TOC, IP, TT, LED, LEDD)
 
-    airfoils.append(af)
+    return af
+
+
+# the number of points per airfoil surface (* 2 for upper and lower surfaces!)
+np = int(input("How Many Points Do You Want Generated : [100] ") or 100)
+
+airfoils = []
+
+# how to distribute the coordinates along the x axis
+while (True):
+    print("You Have The Following Options For Coordinate Spacing:")
+    print("     1 - Equal Spacing")
+    print("     2 - Half Cosine With Smaller Increments Near 0")
+    print("     3 - Half Cosine With Smaller Increments Near 1")
+    print("     4 - Full Cosine")
+    spacing = int(input(" Your Choice : [4] ") or 4)
+
+    if spacing < 0 or spacing > 4: continue
+    break
+
+# enter the NACA profile and modification digits NNNNN-MM
+while True:
+    print("choose the specification type:")
+    print("     1 - NACA 4 modified")
+    print("     2 - NACA 5 modified")
+    profile_spec = int(input(" Your Choice : [2] ") or 2)
+
+    if profile_spec == 1:
+        airfoils.append(do_naca_four())
+    elif profile_spec == 2:
+        airfoils.append(do_naca_five())
+    else:
+        print("unrecognised profile specification!")
 
     if int(input(" 0 to finish, 1 to continue : [0]") or 0) == 0:
         break
