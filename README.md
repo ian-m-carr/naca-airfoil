@@ -20,3 +20,5 @@ portion of the wing (between the nascelles) my understanding is that this droop 
 information of how great this droop is.
 
 The code produces an svg output file airfoil.svg in the current folder
+
+![sample output doc/airfoil.svg](./doc/airfoil.svg)
