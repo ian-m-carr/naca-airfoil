@@ -92,8 +92,8 @@ class Airfoil:
                 self.YC[I] = MC / math.pow(1 - PC, 2) * (1 - 2 * PC + 2 * PC * self.XCC[I] - math.pow(self.XCC[I], 2))
                 self.DYC[I] = 2 * MC / math.pow(1 - PC, 2) * (PC - self.XCC[I])
             else:
-                self.YC[I] = MC / PC ^ 2 * (2 * PC * self.XCC[I] - math.pow(self.XCC[I], 2))
-                self.DYC[I] = 2 * MC / PC ^ 2 * (PC - self.XCC[I])
+                self.YC[I] = MC / math.pow(PC, 2) * (2 * PC * self.XCC[I] - math.pow(self.XCC[I], 2))
+                self.DYC[I] = 2 * MC / math.pow(PC, 2) * (PC - self.XCC[I])
 
         if LED > 0 and LEDD > 0:
             for I in range(self.NP):
