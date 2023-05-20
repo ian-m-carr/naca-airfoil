@@ -107,7 +107,7 @@ class Airfoil:
 
         self.TEANG = 2 * math.atan(1.16925 * TC)
 
-        DESIG = MM * 1000 + PP * 1000 + TOC
+        DESIG = MM * 1000 + PP * 100 + TOC
         SESIG = IP * 10 + TT
         self.DESIG_str = "{:04d}".format(DESIG) + "-" + "{:02d}".format(SESIG)
 
